@@ -89,7 +89,14 @@ export function isOutcomeEntry(entry: TimelineEntry): boolean {
   return entry.source === 'echomind-outcome' || entry.id.startsWith('outcome-')
 }
 
-export function formatWhen(value: string | null): string {
+/**
+ * Render a timestamp for humans.
+ *
+ * Accepts `undefined` as well as `null` because the admin types model an
+ * unmeasured or absent timestamp as either, and this is the one place that
+ * formats them all.
+ */
+export function formatWhen(value: string | null | undefined): string {
   if (!value) return 'Time not recorded'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return 'Time not recorded'

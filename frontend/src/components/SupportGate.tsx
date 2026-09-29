@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { COMPANY, DEMO_DISCLAIMER, DEMO_TOPICS } from '../brand'
+import { COMPANY, DEMO_TOPICS } from '../brand'
 import { isValidEmail, saveIdentity, type SupportIdentity } from '../session'
 
 interface Props {
@@ -85,7 +85,10 @@ export default function SupportGate({ onStart }: Props) {
               </li>
             ))}
           </ul>
-          <p className="gate-demo-note">{DEMO_DISCLAIMER}</p>
+          <p className="gate-scope-note">
+            These products and examples are illustrative for this support experience. They are
+            not the current {COMPANY.name} catalogue.
+          </p>
         </div>
       </div>
     </div>

@@ -92,7 +92,12 @@ def require_configured() -> None:
 # ------------------------------------------------------------------- password
 
 
-def hash_password(password: str, *, salt: bytes | None = None, iterations: int = PBKDF2_DEFAULT_ITERATIONS) -> str:
+def hash_password(
+    password: str,
+    *,
+    salt: bytes | None = None,
+    iterations: int = PBKDF2_DEFAULT_ITERATIONS,
+) -> str:
     """Build the encoded PBKDF2 hash stored in ADMIN_PASSWORD_HASH."""
     if salt is None:
         salt = secrets.token_bytes(16)
@@ -103,9 +108,11 @@ def hash_password(password: str, *, salt: bytes | None = None, iterations: int =
 def verify_password(password: str) -> bool:
     """Constant-time check against whichever password source is configured.
 
-    Runs a dummy PBKDF2 derivation when no hash is configured, so that a
-    misconfigured-but-hashed deployment does not become measurably faster than a
-    correctly configured one. Cheap insurance, four lines.
+    With ADMIN_PASSWORD_HASH set this runs a full PBKDF2 derivation and compares
+    the results with `hmac.compare_digest`. With only ADMIN_PASSWORD set, the
+    plaintext is hashed first so the comparison cost does not depend on the
+    length of the secret, and does not depend on which of the two forms was
+    configured.
     """
     encoded = settings.ADMIN_PASSWORD_HASH
     if encoded:

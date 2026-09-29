@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import agent, health, memory, testimonials
+from app.routers import admin, agent, health, memory, testimonials
 from app.services import testimonials as testimonial_store
 
 logger = logging.getLogger("echomind")
@@ -45,6 +45,9 @@ app.include_router(health.router, prefix=settings.API_PREFIX, tags=["health"])
 app.include_router(memory.router, prefix=f"{settings.API_PREFIX}/memory", tags=["memory"])
 app.include_router(agent.router, prefix=f"{settings.API_PREFIX}/agent", tags=["agent"])
 app.include_router(testimonials.router, prefix=settings.API_PREFIX, tags=["testimonials"])
+# Admin control plane. Every route here except /auth/login depends on
+# get_current_admin, so the dashboard cannot be reached by skipping the frontend.
+app.include_router(admin.router, prefix=f"{settings.API_PREFIX}/admin", tags=["admin"])
 
 
 @app.get("/")

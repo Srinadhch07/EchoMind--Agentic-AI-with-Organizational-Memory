@@ -109,10 +109,16 @@ export const DEMO_SIMILAR_QUESTION = 'We need to export 50,000 records.'
 export const DEMO_OUTCOME_LESSON =
   'The standard CSV export timed out on a request this size. A background batched export that runs in chunks and emails a secure download link worked.'
 
+/**
+ * Public navigation.
+ *
+ * /organization is deliberately absent. It is the admin control plane and is not
+ * a public page, so it is reached from the footer or by typing the URL, and it
+ * redirects to /admin/login unless the backend confirms a session.
+ */
 export const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/why-echomind', label: 'Why EchoMind' },
   { to: '/support', label: 'Customer Support' },
-  { to: '/organization', label: 'Organization' },
   { to: '/about', label: 'About' },
 ] as const

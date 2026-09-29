@@ -241,6 +241,20 @@ async def edit_memory(
         )
 
     bank = _bank(bank_id)
+
+    # Check the memory's own type before calling upstream. Hindsight derives
+    # 'observation' facts and refuses to curate them; without this check the
+    # administrator would get an opaque 502 from the backend instead of a clear
+    # explanation of why this particular memory is read-only.
+    existing = await get_memory(memory_id, bank_id=bank)
+    if not existing["memory"].get("curatable"):
+        found = existing["memory"].get("fact_type") or "this type"
+        raise MemoryAdminError(
+            f"This is a derived {found} memory, which Hindsight generates rather than "
+            f"stores on its own, so it cannot be edited directly. Curate the "
+            f"{'/'.join(CURATABLE_TYPES)} memory it was derived from, or retire this one."
+        )
+
     try:
         await get_client().curate_memory(
             bank, memory_id, text=text, context=context, fact_type=fact_type, entities=entities
@@ -251,8 +265,7 @@ async def edit_memory(
         raise
 
     logger.info("memory.edited id=%s bank=%s", memory_id, bank)
-    updated = await get_memory(memory_id, bank_id=bank)
-    return updated
+    return await get_memory(memory_id, bank_id=bank)
 
 
 async def retire_memory(

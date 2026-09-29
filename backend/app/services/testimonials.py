@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -35,6 +37,9 @@ from app.config import settings
 
 PENDING = "pending"
 APPROVED = "approved"
+REJECTED = "rejected"
+
+STATUSES = (PENDING, APPROVED, REJECTED)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS testimonials (
@@ -73,6 +78,23 @@ def _connect() -> sqlite3.Connection:
     return connection
 
 
+@contextmanager
+def _session() -> Iterator[sqlite3.Connection]:
+    """Open a connection, commit or roll back, and always close it.
+
+    `with sqlite3.connect(...) as c:` does NOT close the connection. It only ends
+    the transaction, leaving the handle to be reclaimed by the garbage collector.
+    That is fine for a one-shot script and a genuine file-descriptor leak in a
+    long-running server, so every call site goes through this instead.
+    """
+    connection = _connect()
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
 def _row_to_public(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": row["id"],
@@ -96,7 +118,7 @@ def _row_to_moderation(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def init_store() -> None:
-    with _connect() as connection:
+    with _session() as connection:
         connection.executescript(SCHEMA)
 
 
@@ -112,7 +134,7 @@ def create_testimonial(
     """Store a submission as pending. Never returns email to the caller."""
     init_store()
     record_id = f"tst_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-    with _write_lock, _connect() as connection:
+    with _write_lock, _session() as connection:
         connection.execute(
             """
             INSERT INTO testimonials
@@ -138,7 +160,7 @@ def create_testimonial(
 def list_public(limit: int = 50) -> list[dict[str, Any]]:
     """Approved + permission-given testimonials, newest first. No email."""
     init_store()
-    with _connect() as connection:
+    with _session() as connection:
         rows = connection.execute(
             f"""
             SELECT {PUBLIC_COLUMNS} FROM testimonials
@@ -154,7 +176,7 @@ def list_public(limit: int = 50) -> list[dict[str, Any]]:
 def list_pending(limit: int = 50) -> list[dict[str, Any]]:
     """Submissions awaiting review. Moderator view only."""
     init_store()
-    with _connect() as connection:
+    with _session() as connection:
         rows = connection.execute(
             f"""
             SELECT {PUBLIC_COLUMNS}, email, status, permission, reviewed_at
@@ -170,13 +192,100 @@ def list_pending(limit: int = 50) -> list[dict[str, Any]]:
 
 def approve(testimonial_id: str) -> bool:
     """Move a submission to approved. Returns False if the id is unknown."""
+    return _set_status(testimonial_id, APPROVED)
+
+
+def reject(testimonial_id: str) -> bool:
+    """Move a submission to rejected. It will never be shown publicly."""
+    return _set_status(testimonial_id, REJECTED)
+
+
+def unpublish(testimonial_id: str) -> bool:
+    """Take a published testimonial back off the public page.
+
+    This moves it to pending rather than rejected: the submitter gave permission
+    and the content was fine, so it can be republished after review rather than
+    needing to be re-entered.
+    """
+    return _set_status(testimonial_id, PENDING)
+
+
+def _set_status(testimonial_id: str, status: str) -> bool:
     init_store()
-    with _write_lock, _connect() as connection:
+    with _write_lock, _session() as connection:
         cursor = connection.execute(
             "UPDATE testimonials SET status = ?, reviewed_at = ? WHERE id = ?",
-            (APPROVED, _now(), testimonial_id),
+            (status, _now(), testimonial_id),
         )
         return cursor.rowcount > 0
+
+
+def delete(testimonial_id: str) -> bool:
+    """Remove a submission permanently. Returns False if the id is unknown."""
+    init_store()
+    with _write_lock, _session() as connection:
+        cursor = connection.execute(
+            "DELETE FROM testimonials WHERE id = ?", (testimonial_id,)
+        )
+        return cursor.rowcount > 0
+
+
+def list_by_status(
+    status: str | None = None, *, limit: int = 200
+) -> list[dict[str, Any]]:
+    """Moderation view. Includes the contact address, which the public view never does.
+
+    `status=None` returns every submission, so the admin can see the whole
+    queue rather than one bucket at a time.
+    """
+    init_store()
+    with _session() as connection:
+        if status is None:
+            rows = connection.execute(
+                f"""
+                SELECT {PUBLIC_COLUMNS}, email, status, permission, reviewed_at
+                FROM testimonials
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                f"""
+                SELECT {PUBLIC_COLUMNS}, email, status, permission, reviewed_at
+                FROM testimonials
+                WHERE status = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (status, limit),
+            ).fetchall()
+    return [_row_to_moderation(row) for row in rows]
+
+
+def counts() -> dict[str, int]:
+    """Real per-status counts for the overview. A plain GROUP BY, nothing inferred."""
+    init_store()
+    with _session() as connection:
+        rows = connection.execute(
+            "SELECT status, COUNT(*) AS total FROM testimonials GROUP BY status"
+        ).fetchall()
+    result = {status: 0 for status in STATUSES}
+    for row in rows:
+        result[row["status"]] = row["total"]
+    result["total"] = sum(result[status] for status in STATUSES)
+    return result
+
+
+def get_status(testimonial_id: str) -> str | None:
+    """Current status of one submission, or None if the id is unknown."""
+    init_store()
+    with _session() as connection:
+        row = connection.execute(
+            "SELECT status FROM testimonials WHERE id = ?", (testimonial_id,)
+        ).fetchone()
+    return row["status"] if row else None
 
 
 def seed_samples() -> int:
@@ -204,7 +313,7 @@ def seed_samples() -> int:
         ),
     ]
     inserted = 0
-    with _write_lock, _connect() as connection:
+    with _write_lock, _session() as connection:
         existing = connection.execute(
             "SELECT COUNT(*) AS total FROM testimonials WHERE is_sample = 1"
         ).fetchone()["total"]

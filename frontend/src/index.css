@@ -74,6 +74,16 @@
 
   --wrap: 1180px;
   --wrap-narrow: 900px;
+
+  /* Horizontal page gutter. Every full-width container derives its padding from
+     this one value, so the whole site can be tightened for a small phone by
+     changing a single custom property rather than a dozen rules. */
+  --gutter: 24px;
+
+  /* Minimum comfortable touch target. 44px is the smallest reliably tappable
+     box on a phone; anything interactive that is not already a large control
+     is stretched to it on coarse pointers. */
+  --tap: 44px;
 }
 
 /* Customer Support portal: warm and conversational. Peach is the accent for
@@ -105,7 +115,12 @@
   --accent-ink: #5e3122;
   --accent-soft: #fdf0e5;
   --accent-line: #edc9ac;
+  /* 100dvh, not 100vh: on a phone the classic viewport unit keeps the height of
+     the page as if the browser chrome and the on-screen keyboard were not
+     there, which pushes the chat composer below the fold. The dvh fallback keeps
+     older browsers on the previous behaviour. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--canvas);
@@ -122,6 +137,33 @@
   box-sizing: border-box;
 }
 
+/* Nothing may be wider than the viewport. Applied to the media elements rather
+   than to a container, so an oversized asset is scaled to fit instead of
+   creating a horizontal scrollbar for the whole page. */
+img,
+svg,
+video,
+canvas,
+iframe,
+embed,
+object {
+  max-width: 100%;
+}
+
+img,
+video,
+canvas {
+  height: auto;
+}
+
+/* A long unbroken token - a URL, a bank id, a file name - is the most common
+   cause of a page that scrolls sideways on a phone. Applied to the text
+   containers rather than to every element: a blanket `min-width: 0` would let
+   non-wrapping controls shrink below their own content and overflow instead. */
+.app {
+  overflow-wrap: break-word;
+}
+
 h1,
 h2,
 h3,
@@ -131,16 +173,19 @@ h4 {
   line-height: 1.22;
   letter-spacing: -0.017em;
   font-weight: 680;
+  /* Headings are the most common cause of text wider than a 320px screen, so
+     they are the elements that scale rather than the elements that get cut. */
+  overflow-wrap: break-word;
 }
 
 h1 {
-  font-size: 2.1rem;
+  font-size: clamp(1.6rem, 1.32rem + 1.4vw, 2.1rem);
 }
 h2 {
-  font-size: 1.3rem;
+  font-size: clamp(1.18rem, 1.08rem + 0.5vw, 1.3rem);
 }
 h3 {
-  font-size: 1.05rem;
+  font-size: clamp(1rem, 0.96rem + 0.22vw, 1.05rem);
 }
 
 p {
@@ -369,7 +414,11 @@ button:focus-visible {
 .field input,
 .field textarea,
 .resolution textarea {
+  /* 100% of the field, and the field is 100% of its column, so a form can never
+     be wider than the screen it is on. */
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   font: inherit;
   font-size: 0.92rem;
@@ -421,7 +470,7 @@ button:focus-visible {
 .topbar-inner {
   max-width: var(--wrap);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--gutter);
   height: 62px;
   display: flex;
   align-items: center;
@@ -434,6 +483,9 @@ button:focus-visible {
   gap: 10px;
   text-decoration: none;
   color: inherit;
+  /* The wordmark is the one thing that must never be squeezed, so it keeps its
+     intrinsic width and the navigation gives up space instead. */
+  flex: 0 0 auto;
 }
 
 .wordmark-mark {
@@ -497,6 +549,87 @@ button:focus-visible {
   font-weight: 650;
 }
 
+/* --------------------------------------------------- mobile menu disclosure */
+
+/* Both the toggle and the panel are inert above the navigation breakpoint, so
+   the desktop header is exactly the layout it was before. */
+.topbar-toggle,
+.topbar-menu {
+  display: none;
+}
+
+.topbar-toggle-bars {
+  display: grid;
+  gap: 4px;
+  width: 18px;
+  flex: 0 0 auto;
+}
+
+.topbar-toggle-bars span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+/* The three bars become a cross, so the button reports its own state visually
+   as well as through aria-expanded. */
+.topbar-toggle[aria-expanded='true'] .topbar-toggle-bars span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.topbar-toggle[aria-expanded='true'] .topbar-toggle-bars span:nth-child(2) {
+  opacity: 0;
+}
+
+.topbar-toggle[aria-expanded='true'] .topbar-toggle-bars span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.topbar-menu {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: 6px var(--gutter) 16px;
+}
+
+.topbar-menu[hidden] {
+  display: none;
+}
+
+.topnav-menu-list ul {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topnav-menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 550;
+  color: var(--ink-700);
+  text-decoration: none;
+}
+
+.topnav-menu-link:hover {
+  background: var(--color-accent);
+  color: var(--ink-900);
+}
+
+.topnav-menu-link[aria-current='page'] {
+  background: var(--color-primary);
+  color: var(--color-background);
+  font-weight: 650;
+}
+
 /* ------------------------------------------------------------------ footer */
 
 .site-footer {
@@ -508,7 +641,7 @@ button:focus-visible {
 .site-footer-inner {
   max-width: var(--wrap);
   margin: 0 auto;
-  padding: 28px 24px 40px;
+  padding: 28px var(--gutter) 40px;
 }
 
 .site-footer-line {
@@ -533,22 +666,28 @@ button:focus-visible {
   letter-spacing: 0.01em;
 }
 
+.footer-admin-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* ------------------------------------------------------------------ layout */
 
 .app-main {
   flex: 1;
+  min-width: 0;
 }
 
 .page {
   max-width: var(--wrap);
   margin: 0 auto;
-  padding: 44px 24px 72px;
+  padding: clamp(26px, 4.5vw, 44px) var(--gutter) clamp(44px, 7vw, 72px);
 }
 
 .section {
   max-width: var(--wrap);
   margin: 0 auto;
-  padding: 0 24px 76px;
+  padding: 0 var(--gutter) clamp(44px, 7vw, 76px);
 }
 
 .eyebrow {
@@ -566,12 +705,12 @@ button:focus-visible {
 }
 
 .page-title {
-  font-size: 2.1rem;
+  font-size: clamp(1.5rem, 1.24rem + 1.3vw, 2.1rem);
   margin-bottom: 12px;
 }
 
 .page-title-sm {
-  font-size: 1.6rem;
+  font-size: clamp(1.32rem, 1.14rem + 0.9vw, 1.6rem);
   margin-bottom: 0;
 }
 
@@ -587,7 +726,7 @@ button:focus-visible {
 }
 
 .section-heading h2 {
-  font-size: 1.6rem;
+  font-size: clamp(1.28rem, 1.1rem + 0.9vw, 1.6rem);
   margin-bottom: 10px;
 }
 
@@ -622,19 +761,21 @@ button:focus-visible {
 .hero-inner {
   max-width: var(--wrap-narrow);
   margin: 0 auto;
-  padding: 76px 24px 72px;
+  padding: clamp(44px, 7vw, 76px) var(--gutter) clamp(40px, 6vw, 72px);
   text-align: center;
   animation: rise 0.5s ease both;
 }
 
 .hero-title {
-  font-size: 3.4rem;
+  /* Scales continuously rather than stepping at breakpoints, so the headline
+     never jumps between two sizes mid-scroll. */
+  font-size: clamp(2.05rem, 1.35rem + 4.4vw, 3.4rem);
   letter-spacing: -0.03em;
   margin-bottom: 12px;
 }
 
 .hero-positioning {
-  font-size: 1.32rem;
+  font-size: clamp(1.02rem, 0.93rem + 0.45vw, 1.32rem);
   font-weight: 550;
   color: var(--color-primary);
   margin-bottom: 18px;
@@ -644,7 +785,7 @@ button:focus-visible {
 .hero-lede {
   max-width: 60ch;
   margin: 0 auto 28px;
-  font-size: 1.02rem;
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.02rem);
   color: var(--ink-600);
 }
 
@@ -663,7 +804,11 @@ button:focus-visible {
 
 .split-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  /* min(320px, 100%) rather than a bare 320px: a fixed minimum track is wider
+     than the viewport on a 320px phone, which is exactly how an auto-fit grid
+     turns into a horizontal scrollbar. Clamping the minimum to the container
+     width collapses the grid to one column instead. */
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 20px;
 }
 
@@ -743,7 +888,7 @@ button:focus-visible {
 
 .example {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 16px;
 }
 
@@ -1008,7 +1153,7 @@ button:focus-visible {
 }
 
 .gate-title {
-  font-size: 1.65rem;
+  font-size: clamp(1.4rem, 1.18rem + 1.1vw, 1.65rem);
   margin-bottom: 6px;
 }
 
@@ -1079,7 +1224,7 @@ button:focus-visible {
   color: var(--ink-500);
 }
 
-.gate-demo-note {
+.gate-scope-note {
   margin: 16px 0 0;
   font-size: 0.74rem;
   color: var(--ink-400);
@@ -1093,111 +1238,120 @@ button:focus-visible {
   margin-top: 18px;
 }
 
-.support-intro {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 22px;
-}
-
-.support-intro-note {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--ink-400);
-}
-
+/* The conversation is the page, so it is centred on a readable measure instead
+   of being stretched across a wide monitor or sharing the row with a second
+   column of context panels. */
 .support-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 20px;
-  align-items: start;
+  justify-content: center;
 }
 
 .support-main {
+  width: 100%;
+  max-width: 860px;
+  margin-inline: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Without this a long word or a wide code block inside a message pushes the
+     card past the viewport. */
+  min-width: 0;
 }
 
+/* Identity on the left, one control on the right. No status readouts, no
+   role badge, no uptime line: none of it helps a customer get an answer. */
 .chat-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
+  gap: 11px;
+  padding: 13px 18px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
 }
 
-.chat-agent {
-  display: flex;
-  align-items: center;
-  gap: 11px;
+.chat-avatar {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+}
+
+.chat-head-id {
+  min-width: 0;
 }
 
 .chat-agent-name {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 680;
   color: var(--ink-900);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  line-height: 1.25;
 }
 
 .chat-agent-role {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-  border: 1px solid var(--accent-line);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  margin: 1px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  color: var(--ink-500);
 }
 
-.chat-agent-status {
-  margin: 0;
-  font-size: 0.76rem;
+/* The vendor wordmark, quiet enough to be optional. */
+.chat-head-brand {
+  margin: 0 0 0 auto;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--ink-500);
+  white-space: nowrap;
+}
+
+.chat-end-session {
+  flex: 0 0 auto;
+}
+
+/* Both labels are in the DOM so the control is never empty of text; the
+   narrower one is hidden by default and revealed on small screens. */
+.chat-end-short {
+  display: none;
 }
 
 .chat-scroll {
   flex: 1;
-  min-height: 430px;
+  min-height: 420px;
   max-height: 62vh;
+  max-height: min(62dvh, 640px);
   overflow-y: auto;
-  padding: 22px 20px;
+  /* Scrolling a long thread must not chain into the page behind it. */
+  overscroll-behavior: contain;
+  padding: 24px 22px;
   background: var(--canvas);
 }
 
+/* Empty state. One question, one line of explanation, three ways to start. */
 .chat-welcome {
-  max-width: 60ch;
-  padding: 10px 4px;
+  max-width: 56ch;
+  padding: 4px 2px;
 }
 
 .chat-welcome h2 {
-  font-size: 1.35rem;
-  margin-bottom: 10px;
+  font-size: clamp(1.2rem, 1.08rem + 0.6vw, 1.35rem);
+  margin-bottom: 8px;
 }
 
 .chat-welcome p {
   color: var(--ink-600);
   font-size: 0.94rem;
-}
-
-.chat-welcome-note {
-  color: var(--ink-500) !important;
-  font-size: 0.86rem !important;
-  padding-left: 12px;
-  border-left: 2px solid var(--accent-line);
+  line-height: 1.6;
 }
 
 .chat-suggestions {
@@ -1224,19 +1378,20 @@ button:focus-visible {
 .suggestion-chip {
   width: 100%;
   text-align: left;
-  padding: 10px 13px;
+  padding: 11px 14px;
   font: inherit;
-  font-size: 0.87rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
   color: var(--ink-700);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
 .suggestion-chip:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-400);
   background: var(--accent-soft);
   color: var(--accent-ink);
 }
@@ -1247,13 +1402,17 @@ button:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 .msg {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  /* A message is a flex item, so it needs to be allowed to shrink; otherwise a
+     long unbroken string inside it sets the column width. */
+  min-width: 0;
+  max-width: 100%;
   animation: rise 0.25s ease both;
 }
 
@@ -1265,71 +1424,129 @@ button:focus-visible {
   align-items: flex-start;
 }
 
-.msg-meta {
+/* Only EchoMind is labelled. A customer's own message is already identified by
+   its side and its colour, so repeating "you" above every one of them is noise. */
+.msg-byline {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 7px;
-  font-size: 0.7rem;
-  color: var(--ink-400);
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--ink-500);
 }
 
-.msg-author {
+.msg-avatar {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--color-primary);
+  color: var(--color-background);
+  font-size: 0.5rem;
   font-weight: 700;
-  color: var(--ink-600);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .msg-bubble {
-  max-width: 78%;
+  min-width: 0;
+  max-width: 100%;
   padding: 12px 15px;
   border-radius: var(--radius);
-  font-size: 0.92rem;
-  line-height: 1.62;
-  white-space: pre-wrap;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  white-space: normal;
+  /* Long URLs, identifiers and unbroken tokens break inside the message rather
+     than widening it. */
+  overflow-wrap: break-word;
   word-break: break-word;
 }
 
-/* The customer's own message is a warm peach surface with deep brown text. */
-.msg-customer .msg-bubble {
+/* The customer's message: warm peach, right aligned, and capped so a short
+   question does not stretch into a full-width slab of colour. */
+.msg-bubble-customer {
+  max-width: min(100%, 58ch);
   background: var(--color-accent);
   color: var(--color-contrast);
   border: 1px solid var(--accent-400);
   border-bottom-right-radius: 4px;
 }
 
-/* The AI response carries the primary forest identity on its leading edge. */
-.msg-agent .msg-bubble {
+/* EchoMind reads as a written support answer rather than a coloured balloon: a
+   calm surface, a thin brand keyline, and a measure capped near 70 characters
+   so a long reply does not run to the edge of a wide monitor. */
+.msg-bubble-agent {
+  max-width: min(100%, 70ch);
+  padding: 15px 18px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-left: 3px solid var(--color-primary);
   color: var(--ink-800);
-  border-bottom-left-radius: 4px;
 }
 
 .msg-failed .msg-bubble {
+  max-width: min(100%, 70ch);
   background: var(--danger-100);
   border-color: var(--danger-line);
   border-left-color: var(--danger-700);
   color: var(--danger-700);
 }
 
+.msg-retry {
+  align-self: flex-start;
+}
+
+/* The customer's own message keeps the whitespace they typed. This lives on the
+   text element rather than on the bubble, because the agent's Markdown reply
+   must not inherit pre-wrapping or every paragraph gains a blank line. */
+.msg-plain {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* Plain-language note that previous experience informed the reply. It is a
+   caption, not a data readout: a count, no ids and no scores. */
+.msg-memory {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 0;
+  max-width: min(100%, 70ch);
+  font-size: 0.73rem;
+  line-height: 1.5;
+  color: var(--ink-500);
+}
+
+.msg-memory-mark {
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 .msg-actions {
   width: 100%;
-  max-width: 78%;
+  max-width: min(100%, 70ch);
 }
 
 .msg-resolution {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.75rem;
-  color: var(--ok-700);
   font-weight: 600;
+  color: var(--ok-700);
 }
 
+/* Waiting for the reply. The customer's screen says who is typing and nothing
+   about which service is being called. */
 .typing {
   display: inline-flex;
-  gap: 4px;
   align-items: center;
-  padding: 4px 0;
+  gap: 5px;
+  min-height: 22px;
 }
 
 .typing span {
@@ -1347,23 +1564,24 @@ button:focus-visible {
   animation-delay: 0.4s;
 }
 
-/* Recording a resolution creates a newly learned experience, so the panel
-   takes the peach accent with deep brown text and a forest keyline. */
+/* Capturing an outcome creates a newly learned experience, so it matters to
+   Thridha Labs. It is still a courtesy prompt, so it is styled as a quiet inset
+   rather than a second call to action. */
 .resolution {
-  margin-top: 4px;
+  margin-top: 2px;
   padding: 12px 14px;
-  border: 1px solid var(--accent-400);
+  border: 1px solid var(--line);
   border-left: 3px solid var(--color-primary);
   border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: var(--color-contrast);
+  background: var(--surface-2);
+  color: var(--ink-800);
 }
 
 .resolution-question {
   margin: 0 0 9px;
   font-size: 0.84rem;
   font-weight: 650;
-  color: var(--color-contrast);
+  color: var(--ink-800);
 }
 
 .resolution-label {
@@ -1371,7 +1589,20 @@ button:focus-visible {
   margin-bottom: 6px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-contrast);
+  color: var(--ink-700);
+}
+
+.resolution textarea {
+  width: 100%;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-800);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  resize: vertical;
 }
 
 .resolution-actions {
@@ -1383,78 +1614,130 @@ button:focus-visible {
 .resolution-note {
   margin: 9px 0 0;
   font-size: 0.74rem;
-  color: var(--color-contrast);
-  opacity: 0.8;
+  line-height: 1.5;
+  color: var(--ink-500);
 }
 
+/* Feedback about the last action, placed between the thread and the composer
+   because that is where the customer's attention already is. */
+.chat-notice {
+  margin: 0;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.chat-notice-success {
+  background: var(--ok-100);
+  color: var(--ok-700);
+}
+
+.chat-notice-error {
+  background: var(--danger-100);
+  color: var(--danger-700);
+}
+
+/* Composer: one bordered field with the send control inside it, so the writing
+   area and the action read as a single unit. */
 .chat-composer {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  padding: 14px 18px;
+  padding: 14px 18px 10px;
   border-top: 1px solid var(--line);
   background: var(--surface);
+  min-width: 0;
 }
 
-.chat-composer textarea {
-  flex: 1;
-  padding: 11px 13px;
-  font: inherit;
-  font-size: 0.92rem;
+.composer-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 6px 6px 6px 13px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   background: var(--surface);
-  color: var(--ink-800);
-  resize: none;
-  max-height: 130px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.chat-composer textarea:focus {
-  outline: none;
+/* The ring sits on the wrapper so it surrounds the whole control instead of
+   only the text field. */
+.composer-field:focus-within {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--accent-100);
 }
 
+.composer-field textarea {
+  flex: 1;
+  /* min-width: 0 is required for a flex child to shrink below its content
+     width; without it the textarea sets the row width and the send button is
+     pushed off screen on a narrow phone. */
+  min-width: 0;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--ink-800);
+  background: none;
+  border: 0;
+  /* The height is set from the draft in the component, so the field grows with
+     the question up to this ceiling. */
+  max-height: 132px;
+  overflow-y: auto;
+  resize: none;
+}
+
+.composer-field textarea:focus {
+  outline: none;
+}
+
+.composer-field textarea::placeholder {
+  color: var(--ink-400);
+}
+
+.composer-send {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-background);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.composer-send:hover:not(:disabled) {
+  background: var(--brand-800);
+}
+
+.composer-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .chat-footnote {
   margin: 0;
-  padding: 0 18px 14px;
-  font-size: 0.74rem;
+  padding: 0 18px 13px;
+  font-size: 0.73rem;
+  text-align: center;
   color: var(--ink-400);
   background: var(--surface);
+  overflow-wrap: anywhere;
 }
 
-.support-aside {
-  display: grid;
-  gap: 14px;
-  position: sticky;
-  top: 78px;
-}
-
-.kv {
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.kv > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.83rem;
-}
-
-.kv dt {
+/* Human escalation, below the card rather than inside the composer. */
+.support-foot {
+  max-width: 860px;
+  margin: 16px auto 0;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.6;
   color: var(--ink-500);
 }
 
-.kv dd {
-  margin: 0;
-  font-weight: 600;
-  color: var(--ink-800);
-  text-align: right;
-  word-break: break-all;
-}
-
+/* Still used by the public "Why EchoMind" page, so it lives on rather than
+   being removed with the chat sidebar it was defined next to. */
 .panel-note {
   margin: 10px 0 0;
   font-size: 0.77rem;
@@ -1466,45 +1749,175 @@ button:focus-visible {
   color: var(--ink-400);
 }
 
-.topic-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
+
+/* ------------------------------------------------------------ markdown body */
+
+/* Rendered agent replies. Scoped tightly so nothing here can leak into the
+   customer portal's own typography.
+
+   The two rules that matter for narrow screens:
+   - `overflow-wrap: anywhere` so a pasted URL breaks instead of widening the
+     bubble, and
+   - a `pre` that scrolls inside itself, so a long code line scrolls the code
+     block and not the whole page. */
+.md {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.topic-list li {
-  display: flex;
-  flex-direction: column;
+.md > :first-child {
+  margin-top: 0;
 }
 
-.topic-name {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ink-800);
+.md > :last-child {
+  margin-bottom: 0;
 }
 
-.topic-category {
-  font-size: 0.72rem;
+.md p {
+  margin: 0 0 0.72em;
+}
+
+/* Agent headings are deliberately capped: a `###` from the model should read as
+   a lead-in inside a chat bubble, not as a page title. */
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  margin: 1.1em 0 0.4em;
+  line-height: 1.35;
+  color: var(--ink-900);
+}
+
+.md h1 {
+  font-size: 1.1rem;
+}
+
+.md h2 {
+  font-size: 1.05rem;
+}
+
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  font-size: 0.95rem;
+}
+
+.md ul,
+.md ol {
+  margin: 0 0 0.72em;
+  padding-left: 1.35em;
+}
+
+.md li {
+  margin-bottom: 0.32em;
+}
+
+.md li > ul,
+.md li > ol {
+  margin: 0.32em 0 0;
+}
+
+.md li::marker {
   color: var(--ink-400);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
 }
 
-.mini-steps {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 8px;
-  font-size: 0.82rem;
+.md strong {
+  color: var(--ink-900);
+  font-weight: 680;
+}
+
+.md a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* A link the renderer refused to make clickable, shown as plain text rather
+   than as a link that goes nowhere. */
+.md-link-plain {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.md blockquote {
+  margin: 0 0 0.72em;
+  padding: 1px 0 1px 12px;
+  border-left: 2px solid var(--accent-line);
   color: var(--ink-600);
 }
 
-.mini-steps li::marker {
-  color: var(--ink-300);
-  font-weight: 700;
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1em 0;
+}
+
+/* Code blocks scroll inside the message. `display: block` plus an explicit
+   `max-width` keeps a wide line inside the bubble; `overflow-x: auto` gives it
+   its own scrollbar so the page never does. */
+.md pre {
+  margin: 0 0 0.72em;
+  padding: 12px 14px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-brand);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.md pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.84em;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Inline code keeps the break behaviour of the surrounding prose, so a long
+   command or an identifier wraps instead of overflowing. */
+.md :not(pre) > code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* GFM can produce tables. As a block with its own overflow they scroll within
+   the message rather than forcing the bubble to grow. */
+.md table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.88em;
+}
+
+.md th,
+.md td {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.md th {
+  background: var(--surface-2);
+  color: var(--ink-900);
+  font-weight: 650;
+}
+
+.md img {
+  border-radius: var(--radius-sm);
 }
 
 /* ----------------------------------------------------------- organization */
@@ -1535,7 +1948,7 @@ button:focus-visible {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -1574,10 +1987,19 @@ button:focus-visible {
 
 .panel {
   padding: 20px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
   margin-bottom: 16px;
+  min-width: 0;
+}
+
+/* The "see the memory effect" panel is the one that walks a customer through the
+   loop, so it is given the peach accent to set it apart from the reference
+   panels next to it. */
+.panel-demo {
+  border-color: var(--accent-400);
+  background: var(--accent-100);
 }
 
 .panel-head {
@@ -1625,7 +2047,7 @@ button:focus-visible {
   margin: 14px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -1689,7 +2111,7 @@ button:focus-visible {
 
 .experience-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -1853,7 +2275,7 @@ button:focus-visible {
 }
 
 .about-title {
-  font-size: 2.8rem;
+  font-size: clamp(1.85rem, 1.35rem + 3vw, 2.8rem);
   letter-spacing: -0.028em;
   margin-bottom: 10px;
 }
@@ -1876,7 +2298,7 @@ button:focus-visible {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -1939,7 +2361,7 @@ html {
 }
 
 .why-hero-title {
-  font-size: 2.9rem;
+  font-size: clamp(1.8rem, 1.3rem + 3.1vw, 2.9rem);
   letter-spacing: -0.028em;
   max-width: 20ch;
   margin-bottom: 18px;
@@ -1948,7 +2370,7 @@ html {
 
 .why-hero-lede {
   max-width: 62ch;
-  font-size: 1.12rem;
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.12rem);
   line-height: 1.65;
   color: var(--ink-600);
   margin-bottom: 26px;
@@ -2092,6 +2514,12 @@ html {
   color: var(--color-background);
 }
 
+/* The step text takes the space the number does not, and is allowed to wrap. */
+.step-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .step-list-plain .step-item:last-child .step-index {
   background: var(--ink-400);
 }
@@ -2179,7 +2607,7 @@ html {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -2263,7 +2691,7 @@ html {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -2293,7 +2721,7 @@ html {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -2523,6 +2951,13 @@ html {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ink-800);
+  /* A long step name must wrap inside its pill rather than widen the strip. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.loop-step-label {
+  display: block;
 }
 
 .loop-strip .loop-step + .loop-step::before {
@@ -2833,137 +3268,1844 @@ html {
   }
 }
 
-/* ------------------------------------------------------------- responsive */
+/* ==========================================================================
+   RESPONSIVE STRATEGY
 
-@media (max-width: 1040px) {
-  .support-shell {
-    grid-template-columns: 1fr;
-  }
-  .support-aside {
-    position: static;
-  }
+   The layout is written desktop-first and then reduced at four breakpoints,
+   which keeps every rule above this point readable as the primary design.
+
+     1080px  laptop        the support sidebar and the organization two-column
+                           layout fold under the main column
+      900px  tablet        dense multi-column grids become one column, the
+                           timeline and memory cards go single-column
+      720px  large phone   the navigation collapses into the menu panel, the
+                           chat composer stacks, touch targets grow to 44px
+      480px  phone         card padding, type scale and grid gaps tighten for
+                           320px-wide devices
+
+   Two supporting techniques do most of the work at every width:
+
+   1. `min(Npx, 100%)` inside every auto-fit grid, so a track can never be
+      wider than its container and a grid collapses instead of overflowing.
+   2. `clamp()` for all display type, so headings scale continuously rather
+      than jumping between sizes at a breakpoint.
+
+   No horizontal page scrolling is introduced at any width. Where content is
+      genuinely wider than a phone - a code block, a long identifier - it is
+      given its own scroll container instead.
+   ========================================================================== */
+
+/* --- large laptop and small tablet ---------------------------------------- */
+
+@media (max-width: 1080px) {
   .org-two-col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 820px) {
-  .topbar-inner {
-    height: auto;
-    padding: 10px 18px;
-    flex-wrap: wrap;
-    gap: 12px 18px;
-  }
-  .topnav {
-    order: 3;
-    width: 100%;
-    margin-right: 0;
-    overflow-x: auto;
-  }
-  .topbar-cta {
-    margin-left: auto;
-  }
-  .page,
-  .section {
-    padding-left: 18px;
-    padding-right: 18px;
-  }
-  .hero-inner {
-    padding: 52px 18px 48px;
-  }
-  .hero-title {
-    font-size: 2.5rem;
-  }
-  .hero-positioning {
-    font-size: 1.12rem;
-  }
-  .flow-step + .flow-step .flow-node {
-    padding-left: 16px;
-  }
-  .flow-step + .flow-step .flow-node::before {
-    content: none;
-  }
-  .msg-bubble {
-    max-width: 92%;
-  }
-  .msg-actions {
-    max-width: 92%;
-  }
-  .closing-band {
-    padding: 24px;
+/* --- tablet ---------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  :root {
+    --gutter: 20px;
   }
 
-  /* The two side-by-side flows stay side by side down to tablet width; the
-     step lists themselves are what get tighter, not the layout. */
-  .why-hero {
-    padding-top: 44px;
+  .topbar-inner {
+    height: auto;
+    min-height: 60px;
+    padding: 10px var(--gutter);
+    gap: 10px 14px;
   }
-  .why-hero-title {
-    font-size: 2.3rem;
-  }
+
   .testimonials {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+
   /* A sticky form would trap the remaining page on short tablet screens. */
   .testimonial-form {
     position: static;
   }
+
+  .admin-main-inner {
+    padding: 24px var(--gutter) 56px;
+  }
+
+  .admin-side {
+    position: static;
+    height: auto;
+  }
 }
 
-@media (max-width: 560px) {
-  h1 {
-    font-size: 1.75rem;
+/* --- large phone and small tablet: the menu, the composer, touch targets --- */
+
+@media (max-width: 720px) {
+  :root {
+    --gutter: 18px;
   }
-  .page-title {
-    font-size: 1.6rem;
+
+  /* The inline link row becomes a disclosure. `display: none` on the desktop
+     nav removes it from the tab order, so a keyboard user is not offered
+     invisible links. */
+  .topnav,
+  .topbar-cta {
+    display: none;
   }
-  .about-title {
-    font-size: 2.1rem;
+
+  .topbar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-left: auto;
+    min-height: var(--tap);
+    padding: 8px 15px;
+    border: 1px solid var(--line-brand);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--color-primary);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 650;
+    cursor: pointer;
   }
-  .gate-card {
-    padding: 22px;
+
+  .topbar-menu {
+    display: block;
   }
-  .chat-scroll {
-    min-height: 380px;
+
+  .topbar-menu-cta {
+    min-height: var(--tap);
   }
+
+  /* Full-width primary actions: a half-width button is a worse tap target
+     than a stacked one, and the stack reads better than two side by side. */
+  .hero-actions,
+  .closing-actions,
+  .testimonial-form .btn,
+  .gate-form .btn {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .hero-actions .btn,
   .closing-actions .btn {
     width: 100%;
   }
-  .why-hero-title {
-    font-size: 1.95rem;
+
+  /* Two-column pairs have no honest two-column form on a phone. */
+  .testimonial-row,
+  .stage-switch,
+  .loop-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 8px;
   }
-  .why-hero-lede {
-    font-size: 1.02rem;
+
+  /* The arrow glyph between inline loop steps would wrap awkwardly once the
+     steps are stacked. */
+  .loop-strip .loop-step + .loop-step::before {
+    content: none;
   }
-  .testimonial-row {
-    grid-template-columns: 1fr;
-    gap: 0;
+
+  .stage-btn {
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+
+  /* Cards lose horizontal padding faster than vertical padding, because
+     vertical padding is what separates stacked cards. */
+  .portal-card,
+  .example-col,
+  .panel,
+  .testimonial-form,
+  .quote-card,
+  .benefit-card,
+  .team-card,
+  .signal,
+  .experience,
+  .admin-panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .closing-band {
+    padding: 20px 16px;
+  }
+
+  /* Bullets and wide pills need room to breathe, not more. */
   .arch,
   .future-stack {
-    padding: 20px 14px;
+    padding: 18px 14px;
   }
+
   .arch-tier-memory,
   .arch-tier-agents,
   .future-memory {
     padding-left: 16px;
     padding-right: 16px;
   }
-  .stage-switch {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+
+  .future-agent {
     width: 100%;
+    justify-content: center;
   }
-  /* The arrow glyph would wrap awkwardly once steps no longer sit inline. */
-  .loop-strip .loop-step + .loop-step::before {
+
+  .why-hero {
+    padding: 40px 0 32px;
+  }
+
+  /* In-page anchors must clear the sticky header, which is now two rows tall
+     on the pages that show the menu. */
+  .page-why section[id] {
+    scroll-margin-top: 96px;
+  }
+
+  /* Every control the customer or an administrator has to hit with a finger is
+     given a full tap target, and text inputs are set to 16px so iOS does not
+     zoom the page when a field is focused. */
+  .btn,
+  .topnav-link,
+  .suggestion-chip,
+  .link-button,
+  .admin-nav-link,
+  .admin-side-toggle,
+  .admin-side-link,
+  .check-label input,
+  .msg-resolved .btn,
+  .msg-retry,
+  .resolution-actions .btn,
+  .topbar-menu-cta {
+    min-height: var(--tap);
+  }
+
+  .link-button,
+  .admin-side-link {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .field input,
+  .field textarea,
+  .resolution textarea,
+  .composer-field textarea,
+  .admin-search input,
+  .admin-search select,
+  .admin-form input,
+  .admin-form textarea,
+  .admin-form select {
+    font-size: 16px;
+  }
+
+  .check-label input {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+  }
+
+  /* Keyboard avoidance. `dvh` tracks the visual viewport, so when the on-screen
+     keyboard opens the thread shortens and the composer stays above it. The
+     `vh` line is the fallback for engines without dvh support. */
+  .chat-scroll {
+    min-height: 0;
+    max-height: 56vh;
+    max-height: 56dvh;
+    padding: 18px 15px;
+  }
+
+  /* The composer keeps its single-row shape: a bordered field with the send
+     button inside it. Stacking them would put a full-width button under the
+     input, which is both taller and a worse target. */
+  .chat-composer {
+    padding: 12px 14px 8px;
+  }
+
+  .chat-footnote {
+    padding: 0 14px 11px;
+  }
+
+  .chat-head {
+    padding: 12px 14px;
+  }
+
+  /* The vendor wordmark is the one optional item in the header, so it is the
+     first thing to go: kept at 375px it squeezes the agent name and subtitle
+     into a 30px column and stretches the bar to twice its height. */
+  .chat-head-brand {
+    display: none;
+  }
+
+  .resolution-actions {
+    flex-wrap: wrap;
+  }
+
+  .resolution-actions .btn {
+    flex: 1 1 140px;
+  }
+
+  .gate {
+    padding: 18px 0 4px;
+  }
+
+  .gate-card {
+    padding: 20px 16px;
+  }
+
+  .gate-head {
+    gap: 12px;
+  }
+
+  /* Metric cards go full width rather than two-up: a two-up metric at 320px
+     leaves room for a number and a truncated label, which is unreadable. */
+  .stat-row,
+  .admin-stat-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat-value,
+  .admin-stat-value {
+    font-size: 1.6rem;
+  }
+
+  .org-tl-item {
+    gap: 12px;
+    padding-left: 18px;
+  }
+
+  .admin-timeline {
+    padding-left: 14px;
+  }
+
+  .admin-timeline-dot {
+    left: -19px;
+  }
+
+  .admin-timeline-item {
+    gap: 10px;
+  }
+
+  .admin-modal-backdrop {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .admin-modal {
+    padding: 20px 16px;
+    max-height: 88vh;
+    max-height: 88dvh;
+  }
+
+  .admin-login {
+    padding: 20px 16px;
+  }
+
+  .admin-login-card {
+    padding: 26px 20px;
+  }
+}
+
+/* --- phone: 320px to 480px ------------------------------------------------ */
+
+@media (max-width: 480px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  .app {
+    font-size: 14.5px;
+  }
+
+  /* The hero has to survive a 320px screen: a long product word set at a
+     desktop size is the single most common source of sideways scroll. */
+  .hero-title {
+    /* Font size is clamped globally; this only trims the letter-spacing, which
+       at this width is the difference between two lines and three. */
+    letter-spacing: -0.02em;
+  }
+
+  .page-intro {
+    margin-bottom: 26px;
+  }
+
+  /* Below this width the agent name, its subtitle and a full "End session" label
+     no longer fit on one line, and the subtitle wraps into a tall column. The
+     control keeps a real word rather than becoming an unlabelled icon, and the
+     accessible name on the button stays the full phrase either way. */
+  .chat-end-long {
+    display: none;
+  }
+
+  .chat-end-short {
+    display: inline;
+  }
+
+  .portal-card,
+  .example-col,
+  .panel,
+  .testimonial-form,
+  .quote-card,
+  .benefit-card,
+  .team-card,
+  .signal,
+  .experience,
+  .admin-panel {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .site-footer-inner {
+    padding-bottom: 32px;
+  }
+
+  .closing-band {
+    padding: 18px 14px;
+  }
+
+  .check-list li {
+    padding-left: 18px;
+  }
+
+  /* A stacked flow has no horizontal room for the connector arrow. */
+  .flow-step {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .flow-step + .flow-step .flow-node {
+    padding-left: 16px;
+  }
+
+  .flow-step + .flow-step .flow-node::before {
     content: none;
   }
-  .loop-strip {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+
+  .dialog-line,
+  .story-line,
+  .step-item {
+    padding-left: 12px;
+    padding-right: 12px;
   }
-  .testimonial-form {
-    padding: 18px 16px;
+
+  .memory-card {
+    padding: 12px 14px;
+  }
+
+  .about-hero {
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+  }
+
+  .admin-login-card {
+    padding: 22px 16px;
+  }
+
+  .admin-modal {
+    padding: 18px 14px;
+  }
+
+  .admin-modal-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .admin-modal-actions .btn {
+    width: 100%;
+  }
+
+  .admin-panel-actions,
+  .admin-head-actions {
+    width: 100%;
+  }
+
+  .admin-panel-actions .btn,
+  .admin-head-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* --- very narrow: 320px --------------------------------------------------- */
+
+@media (max-width: 359px) {
+  :root {
+    --gutter: 12px;
+  }
+
+  .wordmark-product {
+    display: none;
+  }
+
+  .wordmark-company {
+    font-size: 0.78rem;
+  }
+
+  .wordmark-mark {
+    width: 27px;
+    height: 27px;
+    font-size: 0.66rem;
+  }
+
+  .topbar-toggle {
+    padding: 8px 11px;
+  }
+}
+
+/* --- touch pointers, at any width ---------------------------------------- */
+
+/* A touch laptop gets the same targets as a phone, without changing the
+   layout. `pointer: coarse` is the right test: a narrow desktop window is
+   still a mouse. */
+@media (pointer: coarse) {
+  .btn,
+  .topnav-link,
+  .topnav-menu-link,
+  .suggestion-chip,
+  .link-button,
+  .admin-nav-link,
+  .admin-side-toggle,
+  .admin-side-link,
+  .resolution-actions .btn,
+  .msg-retry,
+  .stage-btn {
+    min-height: var(--tap);
+  }
+
+  .link-button,
+  .admin-side-link {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+
+/* ==========================================================================
+   ADMIN CONTROL PLANE
+   Organization console: a dark forest sidebar beside a cream workspace.
+
+   The sidebar is the only part of EchoMind that goes dark. That is deliberate
+   and it is the whole visual separation between the internal console and the
+   public pages -- no second design language, still only the four brand
+   colours. Everything here is layout and density; the palette is inherited.
+   ========================================================================== */
+
+.admin {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--canvas);
+}
+
+/* ------------------------------------------------------------------ sidebar */
+
+.admin-side {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 24px 18px;
+  background: var(--brand-800);
+  color: var(--brand-100);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+}
+
+.admin-side-head {
+  display: contents;
+}
+
+.admin-side-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(230, 237, 228, 0.16);
+}
+
+.admin-side-brand .wordmark-mark {
+  color: var(--brand-800);
+}
+
+.admin-side-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.admin-side-role {
+  margin: 0;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-100);
+  opacity: 0.72;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-nav-label {
+  margin: 0 0 3px;
+  padding-left: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--brand-100);
+  opacity: 0.55;
+}
+
+.admin-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-100);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.admin-nav-link:hover {
+  background: rgba(230, 237, 228, 0.1);
+  color: #fff;
+}
+
+.admin-nav-link-active {
+  background: var(--brand-100);
+  color: var(--brand-800);
+  font-weight: 600;
+}
+
+.admin-nav-link-active:hover {
+  background: #fff;
+  color: var(--brand-800);
+}
+
+.admin-nav-badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-500);
+  color: var(--accent-700);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.admin-nav-link-active .admin-nav-badge {
+  background: var(--brand-800);
+  color: #fff;
+}
+
+.admin-side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(230, 237, 228, 0.16);
+  font-size: 12.5px;
+}
+
+.admin-side-bank,
+.admin-side-user {
+  margin: 0;
+  color: var(--brand-100);
+  opacity: 0.8;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.admin-side-bank code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.admin-side-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.admin-side-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brand-100);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.admin-side-link:hover {
+  color: #fff;
+}
+
+.admin-side-logout {
+  color: var(--accent-500);
+}
+
+.admin-side-logout:hover {
+  color: #fff;
+}
+
+/* Inert above the console breakpoint: the desktop sidebar is a permanent
+   column and a disclosure button there would control nothing. */
+.admin-side-toggle {
+  display: none;
+}
+
+/* The wrapper is a box only on narrow screens. `display: contents` at desktop
+   width keeps the nav and the footer as direct children of the sidebar column,
+   so the desktop layout is byte-for-byte the layout that already worked. */
+.admin-side-body {
+  display: contents;
+}
+
+/* ---------------------------------------------------------------- workspace */
+
+.admin-main {
+  /* min-width: 0 on the grid track lets the workspace shrink; without it a wide
+     table or a long identifier in a panel widens the whole page. */
+  min-width: 0;
+}
+
+.admin-main-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 34px 32px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--canvas);
+}
+
+/* ------------------------------------------------------------------ headers */
+
+.admin-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.admin-title {
+  margin: 2px 0 0;
+  font-size: clamp(1.4rem, 1.15rem + 1.1vw, 1.875rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.admin-lede {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--ink-600);
+  font-size: 14.5px;
+}
+
+.admin-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------- panels */
+
+.admin-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-panel-flush {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.admin-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-panel-title {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.admin-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-panel-note {
+  margin: -4px 0 0;
+  max-width: 78ch;
+  color: var(--ink-600);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.admin-count {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.admin-subhead {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-500);
+}
+
+.admin-footnote,
+.admin-colophon {
+  margin: 0;
+  color: var(--ink-400);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* -------------------------------------------------------------------- stats */
+
+.admin-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(168px, 100%), 1fr));
+  gap: 12px;
+}
+
+.admin-stat {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.admin-stat-label {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-500);
+}
+
+.admin-stat-value {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A pending or unmeasurable figure is never rendered as a 0. A zero would be
+   a claim about the organization; "--" and "Not available" are not. */
+.admin-stat-pending {
+  color: var(--ink-300);
+}
+
+.admin-stat-na {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+.admin-stat-hint {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-400);
+}
+
+.admin-activity {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.admin-activity li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-activity-label {
+  min-width: 148px;
+  color: var(--ink-500);
+}
+
+.admin-quick-links {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------- badges */
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.admin-badge-neutral {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+  color: var(--ink-600);
+}
+
+.admin-badge-live {
+  background: var(--brand-050);
+  border-color: var(--ok-line);
+  color: var(--ok-700);
+}
+
+.admin-badge-pending {
+  background: var(--accent-100);
+  border-color: var(--accent-line);
+  color: var(--accent-700);
+}
+
+.admin-badge-approved {
+  background: var(--ok-100);
+  border-color: var(--ok-line);
+  color: var(--ok-700);
+}
+
+.admin-badge-rejected {
+  background: var(--danger-100);
+  border-color: var(--danger-line);
+  color: var(--danger-700);
+}
+
+.admin-badge-retired {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+  color: var(--ink-500);
+  text-decoration: line-through;
+}
+
+/* ----------------------------------------------------------------- memories */
+
+.admin-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-search-field {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.admin-search-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+
+.admin-search input,
+.admin-search select {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-800);
+  font: inherit;
+  font-size: 14px;
+}
+
+.admin-memory-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-memory {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.admin-memory-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.admin-memory-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-memory-text {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.admin-inspect-text {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.admin-memory-badges,
+.admin-memory-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-memory-meta,
+.admin-memory-when {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+.admin-kv {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.admin-kv-key {
+  color: var(--ink-500);
+}
+
+.admin-kv-value {
+  margin: 0;
+  color: var(--ink-800);
+  word-break: break-word;
+}
+
+.admin-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+
+.admin-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: 2px 16px;
+  font-size: 13.5px;
+}
+
+.admin-meta-row {
+  display: contents;
+}
+
+.admin-meta-label {
+  color: var(--ink-500);
+}
+
+.admin-meta-value {
+  margin: 0;
+  color: var(--ink-800);
+  word-break: break-word;
+  /* A long bank id or capability name must wrap rather than widen the panel. */
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------- experiences */
+
+.admin-experience-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-experience {
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-500);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.admin-experience-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.admin-experience-when,
+.admin-experience-customer,
+.admin-experience-source {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+
+.admin-experience-source {
+  margin-top: 10px;
+  color: var(--ink-400);
+  font-size: 12px;
+}
+
+.admin-experience-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 12px;
+}
+
+.admin-experience-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-step-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-400);
+}
+
+.admin-step-text {
+  color: var(--ink-800);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.admin-signals {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  max-width: 620px;
+}
+
+/* ----------------------------------------------------------------- timeline */
+
+.admin-timeline {
+  margin: 0;
+  padding: 0 0 0 18px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-left: 1px solid var(--line-strong);
+}
+
+.admin-timeline-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+}
+
+.admin-timeline-dot {
+  position: absolute;
+  left: -23px;
+  top: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line-brand);
+}
+
+.admin-timeline-dot-outcome {
+  background: var(--accent-500);
+}
+
+.admin-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-timeline-meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.admin-timeline-when,
+.admin-timeline-customer {
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+.admin-timeline-text {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: 13.5px;
+}
+
+.admin-source-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.admin-source-list li {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+
+.admin-source-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-800);
+}
+
+.admin-source-when {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-400);
+}
+
+/* ------------------------------------------------------------- testimonials */
+
+.admin-testimonial-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-testimonial {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.admin-testimonial-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.admin-testimonial-name {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.admin-testimonial-when {
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+.admin-testimonial-byline {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+
+.admin-testimonial-text {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-800);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.admin-testimonial-contact {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+
+.admin-testimonial-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------ settings */
+
+.admin-config-list,
+.admin-capability-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-config-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.admin-config-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin-config-label {
+  min-width: 200px;
+  color: var(--ink-800);
+}
+
+.admin-config-detail {
+  color: var(--ink-400);
+  font-size: 12.5px;
+}
+
+.admin-capability {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-capability:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin-capability-name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-800);
+  overflow-wrap: anywhere;
+}
+
+.admin-capability-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-600);
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------- modals */
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(21, 53, 40, 0.45);
+}
+
+.admin-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 86vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.admin-modal-wide {
+  max-width: 720px;
+}
+
+.admin-modal-title {
+  margin: 0;
+  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.1875rem);
+  letter-spacing: -0.01em;
+}
+
+.admin-modal-note {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-600);
+}
+
+.admin-modal-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-100);
+  border: 1px solid var(--danger-line);
+  color: var(--danger-700);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.admin-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-modal-quote {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--line-brand);
+  background: var(--surface-2);
+  color: var(--ink-700);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------------------- login */
+
+.admin-login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px;
+  background: var(--brand-800);
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 30px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.admin-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-login-product {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.admin-login-role {
+  margin: 0;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+}
+
+.admin-login-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 1.12rem + 0.9vw, 1.5625rem);
+  letter-spacing: -0.02em;
+}
+
+.admin-login-lede {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-600);
+  line-height: 1.6;
+}
+
+.admin-login-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-100);
+  border: 1px solid var(--danger-line);
+}
+
+.admin-login-alert-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--danger-700);
+}
+
+.admin-login-alert-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger-700);
+  line-height: 1.55;
+}
+
+.admin-login-foot {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-400);
+  line-height: 1.6;
+}
+
+.admin-login-foot a {
+  color: var(--ink-600);
+}
+
+/* ------------------------------------------- danger buttons (admin-scoped) */
+/* The public pages never need a destructive action, so these exist only here. */
+
+.btn-danger {
+  background: var(--danger-700);
+  color: #fff;
+  border: 1px solid var(--danger-700);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #6f2417;
+  border-color: #6f2417;
+}
+
+.btn-danger-soft {
+  background: var(--danger-100);
+  color: var(--danger-700);
+  border: 1px solid var(--danger-line);
+}
+
+.btn-danger-soft:hover:not(:disabled) {
+  background: var(--danger-line);
+  color: var(--danger-700);
+}
+
+.admin code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--ink-800);
+}
+
+/* ==========================================================================
+   ADMIN RESPONSIVE
+
+   The console keeps its desktop arrangement above 1080px. Below that the
+   sidebar becomes a top bar with a disclosure, so the workspace starts at the
+   top of the screen instead of below a 264px column, and the administrator is
+   not asked to scroll past a menu to reach the data.
+
+   Density is preserved rather than reduced: the console is the analytical
+   surface, and collapsing its rows would remove the density that makes it
+   readable next to the friendly customer portal.
+   ========================================================================== */
+
+@media (max-width: 1080px) {
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-side {
+    position: static;
+    height: auto;
+    min-height: 0;
+    padding: 14px var(--gutter) 16px;
+    gap: 14px;
+  }
+
+  /* The brand row and the toggle share a line, and the sections drop below. */
+  .admin-side-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .admin-side-brand {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .admin-side-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: var(--tap);
+    padding: 8px 16px;
+    border: 1px solid rgba(230, 237, 228, 0.4);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--brand-100);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .admin-side-toggle:hover {
+    background: rgba(230, 237, 228, 0.12);
+    color: #fff;
+  }
+
+  /* `display: contents` stops being usable here: the wrapper has to become a
+     real box for the closed state to have something to hide. */
+  .admin-side-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .admin-side-body[data-open='false'] {
+    display: none;
+  }
+
+  .admin-nav {
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .admin-nav-group {
+    gap: 6px;
+  }
+
+  .admin-nav-label {
+    margin-bottom: 0;
+  }
+
+  .admin-side-foot {
+    border-top: 1px solid rgba(230, 237, 228, 0.16);
+    padding-top: 14px;
+  }
+
+  .admin-main-inner {
+    padding: 24px var(--gutter) 56px;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-main-inner {
+    padding: 20px var(--gutter) 48px;
+  }
+
+  .admin-head {
+    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-panel {
+    padding: 16px 14px 18px;
+  }
+
+  .admin-panel-head {
+    /* The title and its actions stop competing for one line, so a filter
+       button is never pushed off the right edge. */
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-panel-actions,
+  .admin-head-actions {
+    width: 100%;
+  }
+
+  .admin-panel-actions .btn,
+  .admin-head-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* The label/value pair stacks, because a 200px label column leaves nothing
+     for the value on a 320px screen. */
+  .admin-meta,
+  .admin-config-row,
+  .admin-config-label,
+  .admin-activity-label {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .admin-meta-label {
+    margin-top: 8px;
+  }
+
+  .admin-activity li {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Search and filter controls each take a full line. */
+  .admin-search-field {
+    flex: 1 1 100%;
+  }
+
+  .admin-search > .btn {
+    width: 100%;
+  }
+
+  /* The pager becomes previous/label/next on three lines instead of one row
+     that cannot fit. */
+  .admin-pager {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .admin-modal-actions {
+    justify-content: stretch;
+  }
+
+  .admin-modal-actions .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-testimonial-actions,
+  .admin-memory-actions,
+  .admin-memory-badges,
+  .admin-quick-links {
+    width: 100%;
+  }
+
+  .admin-testimonial-actions .btn,
+  .admin-memory-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .admin-form {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-nav-link {
+    transition: none;
   }
 }
