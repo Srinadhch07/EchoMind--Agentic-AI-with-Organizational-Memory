@@ -30,3 +30,4 @@ Thumbs.db
 # Logs / local data
 *.log
 uploads/
+backend/data/

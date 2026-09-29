@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.config import settings
@@ -13,6 +17,8 @@ from app.models.schemas import (
 from app.services.agent import learning_timeline, record_outcome, respond, summarize_learning
 from app.services.groq_client import GroqError
 from app.services.hindsight import HindsightError
+
+logger = logging.getLogger("echomind.support")
 
 router = APIRouter()
 
@@ -35,7 +41,7 @@ def _fail(exc: Exception) -> HTTPException:
 @router.post("/respond", response_model=AgentResponse)
 async def agent_respond(request: AgentRequest) -> AgentResponse:
     try:
-        return await respond(
+        result = await respond(
             request.customer,
             request.message,
             bank_id=request.bank_id,
@@ -43,6 +49,18 @@ async def agent_respond(request: AgentRequest) -> AgentResponse:
         )
     except (HindsightError, GroqError) as exc:
         raise _fail(exc) from exc
+    # Support traceability only. The address is never written to Hindsight and
+    # never reaches the LLM, so it cannot surface in organizational memory.
+    logger.info(
+        "support.interaction customer=%s email=%s bank=%s recalled=%d used=%d retained=%s",
+        result.customer,
+        request.customer_email or "-",
+        result.bank_id,
+        result.memory_count,
+        len(result.memories_used),
+        result.retained,
+    )
+    return result
 
 
 @router.post("/outcome", response_model=OutcomeResponse)
@@ -57,11 +75,20 @@ async def agent_outcome(request: OutcomeRequest) -> OutcomeResponse:
         )
     except (HindsightError, GroqError) as exc:
         raise _fail(exc) from exc
+    bank = request.bank_id or settings.HINDSIGHT_BANK_ID
+    logger.info(
+        "support.outcome customer=%s email=%s bank=%s document=%s retained=%s",
+        request.customer,
+        request.customer_email or "-",
+        bank,
+        document_id,
+        retained,
+    )
     return OutcomeResponse(
         retained=retained,
         document_id=document_id,
         lesson=request.lesson,
-        bank_id=request.bank_id or settings.HINDSIGHT_BANK_ID,
+        bank_id=bank,
     )
 
 
